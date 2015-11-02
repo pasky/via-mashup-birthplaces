@@ -20,7 +20,13 @@ function initMap(json) {
 
 function addToMap(res) {
 	console.log(res);
-	var c = SMap.Coords.fromWGS84(res.lon.value, res.lat.value);
+
+	// parse string: Point(1234 5678)
+	var sppos = res.pos.value.indexOf(' ');
+	var lat = res.pos.value.substring(6, sppos);
+	var lon = res.pos.value.substring(sppos+1, res.pos.value.length-1);
+
+	var c = SMap.Coords.fromWGS84(lon, lat);
 
 	var options = {
 		url: obrazek,
@@ -37,51 +43,26 @@ function addToMap(res) {
 }
 
 
-function dbpQuery(name) {
-	var url = "http://dbpedia.org/sparql";
+function wdQuery(name) {
+	var url = "https://query.wikidata.org/bigdata/namespace/wdq/sparql";
 
-	var movie_query = "PREFIX dbpont: <http://dbpedia.org/ontology/>" +
-		    "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>" +
-		    "SELECT ?name ?lat ?lon WHERE {" +
-		    "  ?movie rdfs:label \""+name+"\"@en ;" +
-		    "         dbpont:starring ?actor ." +
-		    "  ?actor rdfs:label ?name ;" +
-		    "         dbpont:birthPlace ?place ." +
-		    "  ?place " +
-		    "     <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat ;" +
-		    "     <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?lon ." +
-		    "  FILTER(LANGMATCHES(LANG(?name), \"en\"))" +
-		    "}";
-	var award_query = "PREFIX dbpont: <http://dbpedia.org/ontology/>" +
-		    "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>" +
-		    "SELECT ?name ?lat ?lon WHERE {" +
-		    "  ?award rdfs:label \""+name+"\"@en ." +
-		    "  ?person rdfs:label ?name ;" +
-		    "         dbpont:award ?award ;" +
-		    "         dbpont:birthPlace ?place ." +
-		    "  ?place " +
-		    "     <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat ;" +
-		    "     <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?lon ." +
-		    "  FILTER(LANGMATCHES(LANG(?name), \"en\"))" +
-		    "}";
-	var aircraft_query = "PREFIX dbpprop: <http://dbpedia.org/property/>" +
-		    "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>" +
-		    "SELECT ?name ?lat ?lon WHERE {" +
-		    "  ?aircraft rdfs:label \""+name+"\"@en ." +
-		    "  ?accident rdfs:label ?name ;" +
-		    "         dbpprop:aircraftType ?aircraft ;" +
-		    "         dbpprop:origin ?place ." +
-		    "  ?place " +
-		    "     <http://www.w3.org/2003/01/geo/wgs84_pos#lat> ?lat ;" +
-		    "     <http://www.w3.org/2003/01/geo/wgs84_pos#long> ?lon ." +
-		    "  FILTER(LANGMATCHES(LANG(?name), \"en\"))" +
-		    "}";
+	var award_query =
+		"PREFIX wdt: <http://www.wikidata.org/prop/direct/>\n" +
+		"PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+		"SELECT DISTINCT ?name ?pos WHERE {\n" +
+		"  ?award rdfs:label \"" + name + "\"@en .\n" +
+		"  ?person wdt:P166 ?award . # award received\n" +
+		"  ?person wdt:P19 ?place . # birth place\n" +
+		"  ?person rdfs:label ?name . filter(langmatches(lang(?name), \"en\"))\n" +
+		"  ?place wdt:P625 ?pos . # coordinate locations\n" +
+		"}";
 	console.log(award_query);
 	var queryUrl = url+"?query="+encodeURIComponent(award_query)+"&format=json";
 	$.ajax({
-		dataType: "jsonp",
+		dataType: "json",
 		url: queryUrl,
 		success: function(_data) {
+			console.log(_data);
 			var results = _data.results.bindings;
 			vrstva.removeAll();
 			souradnice = [];
@@ -94,8 +75,5 @@ function dbpQuery(name) {
 
 $(document).ready(function() {
 	initMap();
-	//dbpQuery('Seven (1995 film)');
-	//dbpQuery('Boeing 777');
-	//$('#find').click(function(e) { dbpQuery($('#text').val()); return false; });
-	$('#findform').submit(function(e) { dbpQuery($('#text').val()); return false; });
+	$('#findform').submit(function(e) { wdQuery($('#text').val()); return false; });
 });
