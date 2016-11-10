@@ -26,7 +26,9 @@ function addToMap(res) {
 	var lat = res.pos.value.substring(6, sppos);
 	var lon = res.pos.value.substring(sppos+1, res.pos.value.length-1);
 
-	var c = SMap.Coords.fromWGS84(lon, lat);
+	//var c = SMap.Coords.fromWGS84(lon, lat);
+	var c = SMap.Coords.fromWGS84(lat, lon);
+	console.log(res.name.value, lat, lon);
 
 	var options = {
 		url: obrazek,
